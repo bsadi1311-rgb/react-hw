@@ -1,51 +1,67 @@
-import { useEffect, useState } from "react";
-import { useData } from "../store/count";
-import { Button, Dialog, DialogTitle, DialogContent } from "@mui/material";
+import { useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import type { RootState } from "../store/store";
+import { addUser, deleteUser, editUser } from "../reduser/todo.slice";
+
+import {
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+} from "@mui/material";
 
 export default function Home() {
-  const { data, getData, addUser, deleteUser, editUser } = useData();
-
-  // ADD
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-
-  // SEARCH
-  const [search, setSearch] = useState("");
-
-  // EDIT
+  const todos = useSelector((state: RootState) => state.todo.data);
+  const dispatch = useDispatch();
+  //edit
   const [editId, setEditId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
-
-  // INFO
-  const [infoOpen, setInfoOpen] = useState(false);
-  const [infoName, setInfoName] = useState("");
-
-  useEffect(() => {
-    getData();
-  }, []);
-
-  // ADD
-  const handleAdd = () => {
-    if (!name.trim()) return;
-
-    addUser(name);
-    setName("");
-    setOpen(false);
+  const handleEdit = (el: any) => {
+    setEditId(el.id);
+    setEditName(el.n);
   };
-
-  // EDIT
   const handleEditSave = () => {
-    if (!editName.trim()) return;
+    if (!editName.trim() || editId === null) return;
 
-    editUser(editId!, editName);
+    dispatch(
+      editUser({
+        id: editId,
+        newName: editName,
+      })
+    );
+
     setEditId(null);
     setEditName("");
   };
+  // add
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  // INFO
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [infoName, setInfoName] = useState("");
+  // SEARCH
+  const [search, setSearch] = useState("");
 
   // SEARCH
-  const filteredData = data.filter((el) =>
-    el.name.toLowerCase().includes(search.toLowerCase())
+  const filteredData = todos.filter((el) =>
+    el.n.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleAdd = () => {
+    if (!name.trim()) return;
+
+    dispatch(
+      addUser({
+        id: Date.now(),
+        n: name,
+      })
+    );
+
+    setName("");
+    setOpen(false);
+  };
 
   return (
     <>
@@ -56,79 +72,133 @@ export default function Home() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
+      {/* adit modal */}
+      <Dialog open={editId !== null} onClose={() => setEditId(null)}>
+        <DialogTitle>Edit User</DialogTitle>
 
-      {/* ADD BUTTON */}
-      <Button
-              variant="contained"  onClick={() => setOpen(true)}>Add User</Button>
-
-      {/* ADD MODAL */}
-      {open && (
-        <div>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Name"
-          />
-
-          <button onClick={handleAdd}>Save</button>
-          <button onClick={() => setOpen(false)}>Close</button>
-        </div>
-      )}
-
-      {/* EDIT MODAL */}
-      {editId !== null && (
-        <div>
-          <input
+        <DialogContent>
+          <TextField
+            fullWidth
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
           />
+        </DialogContent>
 
-          <button onClick={handleEditSave}>Update</button>
-          <button onClick={() => setEditId(null)}>Close</button>
-        </div>
-      )}
+        <DialogActions>
+          <Button onClick={() => setEditId(null)}>Close</Button>
 
+          <Button variant="contained" onClick={handleEditSave}>
+            Update
+          </Button>
+        </DialogActions>
+      </Dialog>
       {/* INFO DIALOG */}
-      <Dialog open={infoOpen} onClose={() => setInfoOpen(false)}>
+      <Dialog
+        open={infoOpen}
+        onClose={() => setInfoOpen(false)}
+      >
         <DialogTitle>User Info</DialogTitle>
+
         <DialogContent>
           <h2>Name: {infoName}</h2>
         </DialogContent>
 
-        <Button onClick={() => setInfoOpen(false)}>Close</Button>
+        <DialogActions>
+          <Button onClick={() => setInfoOpen(false)}>
+            Close
+          </Button>
+        </DialogActions>
       </Dialog>
+      {/* add */}
+      <Button
+        variant="contained"
+        onClick={() => setOpen(true)}
+      >
+        Add User
+      </Button>
 
-      {/* LIST */}
-      {filteredData.map((el) => (
-        <div key={el.id}>
-          <h3>{el.name}</h3>
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Add New User</DialogTitle>
 
-          <div className="flex gap-5">
-            <Button
-              variant="contained" sx={{backgroundColor: "red"}} onClick={() => deleteUser(el.id)}>Delete</Button>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            label="User Name"
+            variant="outlined"
+            margin="normal"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </DialogContent>
 
-            <Button
-              variant="text"
-              onClick={() => {
-                setEditId(el.id);
-                setEditName(el.name);
-              }}
+        <DialogActions>
+          <Button onClick={() => setOpen(false)}>
+            Close
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={handleAdd}
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* ----------------------------------- */}
+      <table className="w-full mt-5 overflow-hidden bg-white rounded-lg shadow-md">
+        <thead className="bg-blue-600 text-white">
+          <tr>
+            <th className="px-4 py-3 text-left">ID</th>
+            <th className="px-4 py-3 text-left">Name</th>
+            <th className="px-4 py-3 text-center">Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {filteredData.map((el) => (
+            <tr
+              key={el.id}
+              className="border-b hover:bg-gray-100 transition"
             >
-              Edit
-            </Button>
+              <td className="px-4 py-3">{el.id}</td>
 
-            <Button
-              variant="contained"
-              onClick={() => {
-                setInfoName(el.name);
-                setInfoOpen(true);
-              }}
-            >
-              Info
-            </Button>
-          </div>
-        </div>
-      ))}
+              <td className="px-4 py-3">{el.n}</td>
+
+              <td className="px-4 py-3 text-center">
+                <Button
+                  color="error"
+                  variant="contained"
+                  onClick={() => dispatch(deleteUser(el.id))}
+                >
+                  Delete
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    setInfoName(el.n);
+                    setInfoOpen(true);
+                  }}
+                >
+                  Info
+                </Button>
+                <Button
+                  variant="contained"
+                  sx={{ ml: 1 , backgroundColor: "orange"}}
+                  onClick={() => handleEdit(el)}
+                >
+                  Edit
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </>
   );
 }
