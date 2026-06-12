@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import type { RootState } from "../store/store";
+import { useDispatch, useSelector } from "react-redux";
 import { addUser, deleteUser, editUser } from "../reduser/todo.slice";
+import { useTodo } from "../store/count";
+import { useAtom } from "jotai";
+import { dataAtom, addAtom, editAtom } from "../store/todo.atoms";
 
 import {
   Button,
@@ -10,195 +12,226 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from "@mui/material";
 
 export default function Home() {
-  const todos = useSelector((state: RootState) => state.todo.data);
   const dispatch = useDispatch();
-  //edit
-  const [editId, setEditId] = useState<number | null>(null);
-  const [editName, setEditName] = useState("");
-  const handleEdit = (el: any) => {
-    setEditId(el.id);
-    setEditName(el.n);
-  };
-  const handleEditSave = () => {
-    if (!editName.trim() || editId === null) return;
 
-    dispatch(
-      editUser({
-        id: editId,
-        newName: editName,
-      })
-    );
+  const data = useSelector((state: any) => state.user.data || []);
+  const { data1, addUser1, editUser1 } = useTodo();
+  const [data2] = useAtom(dataAtom);
+  const [, addUser2] = useAtom(addAtom);
+  const [, editUser2] = useAtom(editAtom);
 
-    setEditId(null);
-    setEditName("");
-  };
-  // add
+
   const [open, setOpen] = useState(false);
+  // add
+  const [openAdd, setOpenAdd] = useState(false);
+  function handleAdd() {
+  const id = Date.now();
+
+    dispatch(addUser({ id, role }));
+    addUser1({ id, name, surname, age: Number(age) });
+    addUser2({ id, phone, status: true });
+
+    setOpenAdd(false);
+  }
+  // edit
+  function handleEdit() {
+    if (!selectedUser) return;
+
+    const id = selectedUser.id;
+
+    dispatch(editUser({ id, role }));
+    editUser1({ id, name, surname, age: Number(age) });
+    editUser2({ id, phone, status: selectedUser.status });
+
+    setOpenEdit(false);
+  }
+  const [openEdit, setOpenEdit] = useState(false);
+  const [openInfo, setOpenInfo] = useState(false);
+
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+
   const [name, setName] = useState("");
-  // INFO
-  const [infoOpen, setInfoOpen] = useState(false);
-  const [infoName, setInfoName] = useState("");
-  // SEARCH
-  const [search, setSearch] = useState("");
+  const [surname, setSurname] = useState("");
+  const [age, setAge] = useState("");
+  const [role, setRole] = useState("");
+  const [phone, setPhone] = useState("");
 
-  // SEARCH
-  const filteredData = todos.filter((el) =>
-    el.n.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
 
-  const handleAdd = () => {
-    if (!name.trim()) return;
-
-    dispatch(
-      addUser({
-        id: Date.now(),
-        n: name,
-      })
-    );
-
-    setName("");
+  const handleDelete = () => {
+    dispatch(deleteUser(el.id));
     setOpen(false);
   };
+
+
+
+  const maindata = data.map((u: any) => {
+    const z = data1.find((x) => x.id === u.id) || {};
+    const j = data2.find((x) => x.id === u.id) || {};
+    return { ...u, ...z, ...j };
+  });
+
+  // SEARCH
+  const [search, setSearch] = useState("")
+  const filteredData = maindata.filter((el) =>
+    el.name.toLowerCase().includes(search.toLowerCase().trim())
+  );
 
   return (
     <>
       {/* SEARCH */}
-      <input
-        className="border p-2 mb-3"
-        placeholder="Search..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-      {/* adit modal */}
-      <Dialog open={editId !== null} onClose={() => setEditId(null)}>
-        <DialogTitle>Edit User</DialogTitle>
+      <TextField id="outlined-basic" label="Search..." variant="outlined" onChange={(e) => setSearch(e.target.value)} sx={{ marginTop: "20px", marginLeft: "20px" }} />
+      {/* add */}
+      <Button variant="contained" onClick={() => setOpenAdd(true)} sx={{ marginTop: "25px", marginLeft: "20px" }}>
+        Add User
+      </Button>
+      <Dialog open={openAdd} onClose={() => setOpenAdd(false)} fullWidth>
+        <DialogTitle>Add User</DialogTitle>
 
         <DialogContent>
-          <TextField
-            fullWidth
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-          />
+          <TextField fullWidth margin="dense" label="Name" onChange={(e) => setName(e.target.value)} />
+          <TextField fullWidth margin="dense" label="Surname" onChange={(e) => setSurname(e.target.value)} />
+          <TextField fullWidth margin="dense" label="Age" onChange={(e) => setAge(e.target.value)} />
+          <TextField fullWidth margin="dense" label="Role" onChange={(e) => setRole(e.target.value)} />
+          <TextField fullWidth margin="dense" label="Phone" onChange={(e) => setPhone(e.target.value)} />
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={() => setEditId(null)}>Close</Button>
-
-          <Button variant="contained" onClick={handleEditSave}>
-            Update
-          </Button>
+          <Button onClick={() => setOpenAdd(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleAdd}>Save</Button>
         </DialogActions>
       </Dialog>
-      {/* INFO DIALOG */}
-      <Dialog
-        open={infoOpen}
-        onClose={() => setInfoOpen(false)}
-      >
+      {/* info */}
+      <Dialog open={openInfo} onClose={() => setOpenInfo(false)}>
         <DialogTitle>User Info</DialogTitle>
 
         <DialogContent>
-          <h2>Name: {infoName}</h2>
+          <p><b>Name:</b> {selectedUser?.name}</p>
+          <p><b>Surname:</b> {selectedUser?.surname}</p>
+          <p><b>Age:</b> {selectedUser?.age}</p>
+          <p><b>Role:</b> {selectedUser?.role}</p>
+          <p><b>Phone:</b> {selectedUser?.phone}</p>
+          <p>
+            <b>Status:</b>{" "}
+            {selectedUser?.status ? "Active 🟢" : "Inactive 🔴"}
+          </p>
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={() => setInfoOpen(false)}>
-            Close
-          </Button>
+          <Button onClick={() => setOpenInfo(false)}>Close</Button>
         </DialogActions>
       </Dialog>
-      {/* add */}
-      <Button
-        variant="contained"
-        onClick={() => setOpen(true)}
-      >
-        Add User
-      </Button>
 
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Add New User</DialogTitle>
+      {/* edit */}
+      <Dialog open={openEdit} onClose={() => setOpenEdit(false)} fullWidth>
+        <DialogTitle>Edit User</DialogTitle>
 
         <DialogContent>
-          <TextField
-            autoFocus
-            fullWidth
-            label="User Name"
-            variant="outlined"
-            margin="normal"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+          <TextField fullWidth margin="dense" value={name} onChange={(e) => setName(e.target.value)} />
+          <TextField fullWidth margin="dense" value={surname} onChange={(e) => setSurname(e.target.value)} />
+          <TextField fullWidth margin="dense" value={age} onChange={(e) => setAge(e.target.value)} />
+          <TextField fullWidth margin="dense" value={role} onChange={(e) => setRole(e.target.value)} />
+          <TextField fullWidth margin="dense" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>
-            Close
-          </Button>
-
-          <Button
-            variant="contained"
-            onClick={handleAdd}
-          >
-            Save
-          </Button>
+          <Button onClick={() => setOpenEdit(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleEdit}>Update</Button>
         </DialogActions>
       </Dialog>
-      {/* ----------------------------------- */}
-      <table className="w-full mt-5 overflow-hidden bg-white rounded-lg shadow-md">
-        <thead className="bg-blue-600 text-white">
-          <tr>
-            <th className="px-4 py-3 text-left">ID</th>
-            <th className="px-4 py-3 text-left">Name</th>
-            <th className="px-4 py-3 text-center">Action</th>
-          </tr>
-        </thead>
+      < div style={{ padding: 20 }}>
+        <TableContainer component={Paper} sx={{ mt: 3 }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>Surname</TableCell>
+                <TableCell>Age</TableCell>
+                <TableCell>Role</TableCell>
+                <TableCell>Phone</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Action</TableCell>
+              </TableRow>
+            </TableHead>
 
-        <tbody>
-          {filteredData.map((el) => (
-            <tr
-              key={el.id}
-              className="border-b hover:bg-gray-100 transition"
-            >
-              <td className="px-4 py-3">{el.id}</td>
+            <TableBody>
+              {filteredData.map((el: any) => (
+                <TableRow key={el.id}>
+                  <TableCell>{el.name}</TableCell>
+                  <TableCell>{el.surname}</TableCell>
+                  <TableCell>{el.age}</TableCell>
+                  <TableCell>{el.role}</TableCell>
+                  <TableCell>{el.phone}</TableCell>
+                  <TableCell>{el.status ? "ACTIVE" : "INACTIVE"}</TableCell>
 
-              <td className="px-4 py-3">{el.n}</td>
+                  <TableCell>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      onClick={handleOpen}
+                    >
+                      Delete
+                    </Button>
 
-              <td className="px-4 py-3 text-center">
-                <Button
-                  color="error"
-                  variant="contained"
-                  onClick={() => dispatch(deleteUser(el.id))}
-                >
-                  Delete
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={() => {
-                    setInfoName(el.n);
-                    setInfoOpen(true);
-                  }}
-                >
-                  Info
-                </Button>
-                <Button
-                  variant="contained"
-                  sx={{ ml: 1 , backgroundColor: "orange"}}
-                  onClick={() => handleEdit(el)}
-                >
-                  Edit
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                    <Dialog open={open} onClose={handleClose}>
+                      <DialogTitle>Confirm Delete</DialogTitle>
+
+                      <DialogContent>
+                        Are you sure you want to delete this user?
+                      </DialogContent>
+
+                      <DialogActions>
+                        <Button onClick={handleClose}>
+                          Cancel
+                        </Button>
+
+                        <Button variant="contained" onClick={() => dispatch(deleteUser(el.id))} color="error">
+                          Delete
+                        </Button>
+                      </DialogActions>
+                    </Dialog>
+                    <Button
+                      onClick={() => {
+                        setSelectedUser(el);
+                        setOpenInfo(true);
+                      }}
+                    >
+                      Info
+                    </Button>
+                    <Button variant="contained"
+                      onClick={() => {
+                        setSelectedUser(el);
+                        setName(el.name);
+                        setSurname(el.surname);
+                        setAge(el.age);
+                        setRole(el.role);
+                        setPhone(el.phone);
+                        setOpenEdit(true);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  </TableCell>
+
+                </TableRow>
+              ))}
+            </TableBody>
+
+          </Table>
+        </TableContainer>
+
+      </div >
     </>
   );
 }

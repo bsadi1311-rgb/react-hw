@@ -1,42 +1,33 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-interface IUser {
-  id: number;
-  n: string;
-}
-
-export interface TodoState {
-  data: IUser[];
-}
-
-const initialState: TodoState = {
+const initialState = {
   data: [
-    { id: 1, n: "sadi" },
-    { id: 2, n: "wedfrgi" },
+    { id: 1, role: "dev" },
+    { id: 2, role: "designer" },
+    { id: 3, role: "dev" },
+    { id: 4, role: "designer" },
+    { id: 5, role: "dev" },
+    { id: 6, role: "designer" },
   ],
 };
 
-export const TodoSlice = createSlice({
+const todoSlice = createSlice({
   name: "todo",
   initialState,
   reducers: {
-    addUser: (state, { payload }) => {
-      state.data.push(payload);
+    addUser: (state, action) => {
+      state.data.push(action.payload);
     },
-
-    deleteUser: (state, { payload }) => {
-      state.data = state.data.filter((el) => el.id !== payload);
+    deleteUser: (state, action) => {
+      state.data = state.data.filter((u) => u.id !== action.payload);
     },
-    editUser: (state, { payload }) => {
-      const { id, newName } = payload;
-
-      state.data = state.data.map((user) =>
-        user.id === id ? { ...user, n: newName } : user
+    editUser: (state, action) => {
+      state.data = state.data.map((u) =>
+        u.id === action.payload.id ? action.payload : u
       );
     },
   },
 });
 
-export const { addUser, deleteUser, editUser} = TodoSlice.actions;
-
-export default TodoSlice.reducer;
+export const { addUser, deleteUser, editUser } = todoSlice.actions;
+export default todoSlice.reducer;
