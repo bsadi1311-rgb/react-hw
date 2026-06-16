@@ -1,237 +1,261 @@
-import { useState } from "react";
+import {
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+} from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { addUser, deleteUser, editUser } from "../reduser/todo.slice";
-import { useTodo } from "../store/count";
-import { useAtom } from "jotai";
-import { dataAtom, addAtom, editAtom } from "../store/todo.atoms";
+import {
+  deleteUser,
+  getData,
+  addUser,
+} from "../reduser/todo.slice";
 
 import {
+  Card,
+  CardContent,
+  Typography,
   Button,
+  Container,
+  CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
 } from "@mui/material";
 
 export default function Home() {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<any>();
 
-  const data = useSelector((state: any) => state.user.data || []);
-  const { data1, addUser1, editUser1 } = useTodo();
-  const [data2] = useAtom(dataAtom);
-  const [, addUser2] = useAtom(addAtom);
-  const [, editUser2] = useAtom(editAtom);
+  const data = useSelector(
+    (store: any) => store.todo.data
+  );
 
+  const isLoading = useSelector(
+    (store: any) => store.todo.isLoading
+  );
 
   const [open, setOpen] = useState(false);
-  // add
-  const [openAdd, setOpenAdd] = useState(false);
-  function handleAdd() {
-  const id = Date.now();
-
-    dispatch(addUser({ id, role }));
-    addUser1({ id, name, surname, age: Number(age) });
-    addUser2({ id, phone, status: true });
-
-    setOpenAdd(false);
-  }
-  // edit
-  function handleEdit() {
-    if (!selectedUser) return;
-
-    const id = selectedUser.id;
-
-    dispatch(editUser({ id, role }));
-    editUser1({ id, name, surname, age: Number(age) });
-    editUser2({ id, phone, status: selectedUser.status });
-
-    setOpenEdit(false);
-  }
-  const [openEdit, setOpenEdit] = useState(false);
-  const [openInfo, setOpenInfo] = useState(false);
-
-  const [selectedUser, setSelectedUser] = useState<any>(null);
 
   const [name, setName] = useState("");
-  const [surname, setSurname] = useState("");
-  const [age, setAge] = useState("");
-  const [role, setRole] = useState("");
-  const [phone, setPhone] = useState("");
+  const [description, setDescription] =
+    useState("");
+  const [image, setImage] =
+    useState<File | null>(null);
 
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  useEffect(() => {
+    dispatch(getData());
+  }, [dispatch]);
 
-  const handleDelete = () => {
-    dispatch(deleteUser(el.id));
+  const preview = useMemo(() => {
+    if (!image) return "";
+    return URL.createObjectURL(image);
+  }, [image]);
+
+  const handleAdd = useCallback(() => {
+    if (
+      !name.trim() ||
+      !description.trim() ||
+      !image
+    )
+      return;
+
+    dispatch(
+      addUser({
+        name,
+        description,
+        image,
+      })
+    );
+
+    setName("");
+    setDescription("");
+    setImage(null);
     setOpen(false);
-  };
+  }, [
+    name,
+    description,
+    image,
+    dispatch,
+  ]);
 
-
-
-  const maindata = data.map((u: any) => {
-    const z = data1.find((x) => x.id === u.id) || {};
-    const j = data2.find((x) => x.id === u.id) || {};
-    return { ...u, ...z, ...j };
-  });
-
-  // SEARCH
-  const [search, setSearch] = useState("")
-  const filteredData = maindata.filter((el) =>
-    el.name.toLowerCase().includes(search.toLowerCase().trim())
-  );
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <CircularProgress />
+      </div>
+    );
+  }
 
   return (
     <>
-      {/* SEARCH */}
-      <TextField id="outlined-basic" label="Search..." variant="outlined" onChange={(e) => setSearch(e.target.value)} sx={{ marginTop: "20px", marginLeft: "20px" }} />
-      {/* add */}
-      <Button variant="contained" onClick={() => setOpenAdd(true)} sx={{ marginTop: "25px", marginLeft: "20px" }}>
-        Add User
-      </Button>
-      <Dialog open={openAdd} onClose={() => setOpenAdd(false)} fullWidth>
-        <DialogTitle>Add User</DialogTitle>
+      <Container maxWidth="lg">
+        <div className="flex justify-between items-center my-8">
+          <Typography
+            variant="h4"
+            fontWeight="bold"
+          >
+            Users List
+          </Typography>
+
+          <Button
+            variant="contained"
+            onClick={() => setOpen(true)}
+          >
+            Add User
+          </Button>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {data?.map((el: any) => (
+            <Card
+              key={el.id}
+              className="shadow-lg hover:shadow-2xl transition-all duration-300"
+            >
+              <CardContent>
+                {el.images?.[0]?.imageName && (
+                  <img
+                    src={`https://to-dos-api.softclub.tj/images/${el.images[0].imageName}`}
+                    alt={el.name}
+                    className="w-full h-52 object-cover rounded-xl mb-3"
+                  />
+                )}
+
+                <Typography variant="h5">
+                  {el.name}
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  sx={{ mt: 1 }}
+                >
+                  {el.description}
+                </Typography>
+
+                <Typography
+                  variant="caption"
+                  display="block"
+                  sx={{ mt: 1 }}
+                >
+                  ID: {el.id}
+                </Typography>
+
+                <div className="flex justify-end mt-4">
+                  <Button
+                    variant="contained"
+                    color="error"
+                    onClick={() =>
+                      dispatch(deleteUser(el.id))
+                    }
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </Container>
+
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          Add User
+        </DialogTitle>
 
         <DialogContent>
-          <TextField fullWidth margin="dense" label="Name" onChange={(e) => setName(e.target.value)} />
-          <TextField fullWidth margin="dense" label="Surname" onChange={(e) => setSurname(e.target.value)} />
-          <TextField fullWidth margin="dense" label="Age" onChange={(e) => setAge(e.target.value)} />
-          <TextField fullWidth margin="dense" label="Role" onChange={(e) => setRole(e.target.value)} />
-          <TextField fullWidth margin="dense" label="Phone" onChange={(e) => setPhone(e.target.value)} />
+          <TextField
+            fullWidth
+            label="Name"
+            margin="normal"
+            value={name}
+            onChange={(e) =>
+              setName(e.target.value)
+            }
+          />
+
+          <TextField
+            fullWidth
+            label="Description"
+            margin="normal"
+            multiline
+            rows={3}
+            value={description}
+            onChange={(e) =>
+              setDescription(
+                e.target.value
+              )
+            }
+          />
+
+          <Button
+            component="label"
+            variant="outlined"
+            fullWidth
+            sx={{ mt: 2 }}
+          >
+            Upload Image
+
+            <input
+              hidden
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file =
+                  e.target.files?.[0];
+
+                if (!file) return;
+
+                if (
+                  file.size >
+                  2 * 1024 * 1024
+                ) {
+                  alert(
+                    "Image must be less than 2MB"
+                  );
+                  return;
+                }
+
+                setImage(file);
+              }}
+            />
+          </Button>
+
+          {image && (
+            <>
+              <Typography sx={{ mt: 2 }}>
+                {image.name}
+              </Typography>
+
+              <img
+                src={preview}
+                alt="preview"
+                className="w-full h-52 object-cover rounded-xl mt-3"
+              />
+            </>
+          )}
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={() => setOpenAdd(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleAdd}>Save</Button>
+          <Button
+            onClick={() => setOpen(false)}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={handleAdd}
+          >
+            Save
+          </Button>
         </DialogActions>
       </Dialog>
-      {/* info */}
-      <Dialog open={openInfo} onClose={() => setOpenInfo(false)}>
-        <DialogTitle>User Info</DialogTitle>
-
-        <DialogContent>
-          <p><b>Name:</b> {selectedUser?.name}</p>
-          <p><b>Surname:</b> {selectedUser?.surname}</p>
-          <p><b>Age:</b> {selectedUser?.age}</p>
-          <p><b>Role:</b> {selectedUser?.role}</p>
-          <p><b>Phone:</b> {selectedUser?.phone}</p>
-          <p>
-            <b>Status:</b>{" "}
-            {selectedUser?.status ? "Active 🟢" : "Inactive 🔴"}
-          </p>
-        </DialogContent>
-
-        <DialogActions>
-          <Button onClick={() => setOpenInfo(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* edit */}
-      <Dialog open={openEdit} onClose={() => setOpenEdit(false)} fullWidth>
-        <DialogTitle>Edit User</DialogTitle>
-
-        <DialogContent>
-          <TextField fullWidth margin="dense" value={name} onChange={(e) => setName(e.target.value)} />
-          <TextField fullWidth margin="dense" value={surname} onChange={(e) => setSurname(e.target.value)} />
-          <TextField fullWidth margin="dense" value={age} onChange={(e) => setAge(e.target.value)} />
-          <TextField fullWidth margin="dense" value={role} onChange={(e) => setRole(e.target.value)} />
-          <TextField fullWidth margin="dense" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        </DialogContent>
-
-        <DialogActions>
-          <Button onClick={() => setOpenEdit(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleEdit}>Update</Button>
-        </DialogActions>
-      </Dialog>
-      < div style={{ padding: 20 }}>
-        <TableContainer component={Paper} sx={{ mt: 3 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Surname</TableCell>
-                <TableCell>Age</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell>Phone</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Action</TableCell>
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
-              {filteredData.map((el: any) => (
-                <TableRow key={el.id}>
-                  <TableCell>{el.name}</TableCell>
-                  <TableCell>{el.surname}</TableCell>
-                  <TableCell>{el.age}</TableCell>
-                  <TableCell>{el.role}</TableCell>
-                  <TableCell>{el.phone}</TableCell>
-                  <TableCell>{el.status ? "ACTIVE" : "INACTIVE"}</TableCell>
-
-                  <TableCell>
-                    <Button
-                      variant="contained"
-                      color="error"
-                      onClick={handleOpen}
-                    >
-                      Delete
-                    </Button>
-
-                    <Dialog open={open} onClose={handleClose}>
-                      <DialogTitle>Confirm Delete</DialogTitle>
-
-                      <DialogContent>
-                        Are you sure you want to delete this user?
-                      </DialogContent>
-
-                      <DialogActions>
-                        <Button onClick={handleClose}>
-                          Cancel
-                        </Button>
-
-                        <Button variant="contained" onClick={() => dispatch(deleteUser(el.id))} color="error">
-                          Delete
-                        </Button>
-                      </DialogActions>
-                    </Dialog>
-                    <Button
-                      onClick={() => {
-                        setSelectedUser(el);
-                        setOpenInfo(true);
-                      }}
-                    >
-                      Info
-                    </Button>
-                    <Button variant="contained"
-                      onClick={() => {
-                        setSelectedUser(el);
-                        setName(el.name);
-                        setSurname(el.surname);
-                        setAge(el.age);
-                        setRole(el.role);
-                        setPhone(el.phone);
-                        setOpenEdit(true);
-                      }}
-                    >
-                      Edit
-                    </Button>
-                  </TableCell>
-
-                </TableRow>
-              ))}
-            </TableBody>
-
-          </Table>
-        </TableContainer>
-
-      </div >
     </>
   );
 }

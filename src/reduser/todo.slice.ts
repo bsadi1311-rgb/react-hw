@@ -1,33 +1,107 @@
-import { createSlice } from "@reduxjs/toolkit";
+import axios from "axios";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
-const initialState = {
-  data: [
-    { id: 1, role: "dev" },
-    { id: 2, role: "designer" },
-    { id: 3, role: "dev" },
-    { id: 4, role: "designer" },
-    { id: 5, role: "dev" },
-    { id: 6, role: "designer" },
-  ],
+interface IUser {
+  id: number;
+  name: string;
+  description?: string;
+  images?: any[];
+}
+
+interface TodoState {
+  data: IUser[];
+  isLoading: boolean;
+  isError: boolean;
+}
+
+const initialState: TodoState = {
+  data: [],
+  isLoading: false,
+  isError: false,
 };
 
-const todoSlice = createSlice({
+const url = "https://to-dos-api.softclub.tj/api/to-dos";
+
+// GET
+export const getData = createAsyncThunk(
+  "todo/getData",
+  async () => {
+    const { data } = await axios.get(url);
+    return data.data;
+  }
+);
+
+// DELETE
+export const deleteUser = createAsyncThunk(
+  "todo/deleteUser",
+  async (id: number, { dispatch }) => {
+    await axios.delete(`${url}?id=${id}`);
+
+    dispatch(getData());
+  }
+);
+
+// ADD
+export const addUser = createAsyncThunk(
+  "todo/addUser",
+  async (
+    user: {
+      name: string;
+      description: string;
+      image: File;
+    },
+    { dispatch }
+  ) => {
+    const formData = new FormData();
+
+    formData.append("Name", user.name);
+    formData.append("Description", user.description);
+    formData.append("Images", user.image);
+
+    await axios.post(url, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    dispatch(getData());
+  }
+);
+
+export const TodoSlice = createSlice({
   name: "todo",
   initialState,
-  reducers: {
-    addUser: (state, action) => {
-      state.data.push(action.payload);
-    },
-    deleteUser: (state, action) => {
-      state.data = state.data.filter((u) => u.id !== action.payload);
-    },
-    editUser: (state, action) => {
-      state.data = state.data.map((u) =>
-        u.id === action.payload.id ? action.payload : u
-      );
-    },
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+
+      // GET
+      .addCase(getData.pending, (state) => {
+        state.isLoading = true;
+        state.isError = false;
+      })
+
+      .addCase(getData.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.data = action.payload;
+      })
+
+      .addCase(getData.rejected, (state) => {
+        state.isLoading = false;
+        state.isError = true;
+      })
+
+      // ADD
+      .addCase(addUser.fulfilled, (state) => {
+        state.isLoading = false;
+      })
+      // DELETE
+
+      .addCase(deleteUser.fulfilled, (state) => {
+        state.isLoading = false;
+      })
+
   },
 });
 
-export const { addUser, deleteUser, editUser } = todoSlice.actions;
-export default todoSlice.reducer;
+export default TodoSlice.reducer;
